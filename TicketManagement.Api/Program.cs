@@ -33,7 +33,6 @@ IMapper mapper = MappingConfig.RegisterMaps().CreateMapper();
 builder.Services.AddSingleton(mapper);
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
-
 // Add configs
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("ApiSettings:JwtOptions"));
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
@@ -107,10 +106,11 @@ app.UseSwaggerUI(c =>
 {
     if (!app.Environment.IsDevelopment())
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "TICKET MANAGEMENT API");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "EVENT MANAGEMENT API");
         c.RoutePrefix = string.Empty;
     }
 });
+
 
 app.UseHttpsRedirection();
 

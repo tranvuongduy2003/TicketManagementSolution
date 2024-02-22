@@ -1,6 +1,9 @@
 ﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using TicketManagement.Api.Contracts;
 using TicketManagement.Api.Data;
+using TicketManagement.Api.Dtos;
+using TicketManagement.Api.Dtos.Statistic;
 using TicketManagement.Api.Models;
 
 namespace TicketManagement.Api.Services;
@@ -16,7 +19,30 @@ public class StatisticService : IStatisticService
         _mapper = mapper;
     }
 
-    public async Task<IEnumerable<Revenue>> GetGeneralStatistic()
+    public async Task<GeneralStatisticDto> GetGeneralStatistic()
+    {
+        try
+        {
+            var totalEvents = _db.Events.Count();
+            var totalBoughtTickets = _db.Tickets.Count();
+            var totalCategories = _db.Categories.Count();
+            var totalUsers = _db.Users.Count();
+
+            return new GeneralStatisticDto
+            {
+                TotalEvents = totalEvents,
+                TotalBoughtTickets = totalBoughtTickets,
+                TotalCategories = totalCategories,
+                TotalUsers = totalUsers,
+            };
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    public async Task<IEnumerable<Revenue>> GetRevenueStatistic()
     {
         try
         {
@@ -37,12 +63,12 @@ public class StatisticService : IStatisticService
             };
 
             var statistic = (from m in monthList
-                    from p in _db.Payments
-                    where p.CreatedAt.Year == DateTime.Now.Year
-                    select new Payment
+                    join p in _db.Payments.Where(p => p.CreatedAt.Year == DateTime.Now.Year) on m.CreatedAt.Month equals p.CreatedAt.Month into joinedPayments
+                    from pj in joinedPayments.DefaultIfEmpty()
+                    select new
                     {
                         CreatedAt = m.CreatedAt,
-                        TotalPrice = m.CreatedAt.Month == p.CreatedAt.Month ? p.TotalPrice : m.TotalPrice
+                        TotalPrice = pj != null ? pj.TotalPrice : 0
                     })
                 .GroupBy(p => p.CreatedAt.Month)
                 .Select(pl => new Revenue
@@ -52,6 +78,101 @@ public class StatisticService : IStatisticService
                 });
 
             return statistic;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    public async Task<IEnumerable<EventStatisticDto>> GetEventsStatisticByCategory()
+    {
+        try
+        {
+            var statistic = _db.Events.Join(_db.Categories, e => e.CategoryId, c => c.Id, (e, c) =>
+                    new Event
+                    {
+                        Id = e.Id,
+                        CategoryId = e.CategoryId,
+                        Category = c,
+                    })
+                .GroupBy(e => e.Category)
+                .Select(pl => new EventStatisticDto()
+                {
+                    CategoryId = pl.Key.Id,
+                    Category = pl.Key,
+                    EventQuantity = pl.Count(),
+                }).ToList();
+
+            return statistic;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    public async Task<EventsStatisticDto> GetEventsStatistic()
+    {
+        try
+        {
+            var totalEvents = _db.Events.Count();
+            var totalBoughtTickets = _db.Tickets.Count();
+            var revenue = _db.Payments.Sum(p => p.TotalPrice);
+
+            return new EventsStatisticDto
+            {
+                TotalEvents = totalEvents,
+                TotalBoughtTickets = totalBoughtTickets,
+                Revenue = revenue
+            };
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    public async Task<EventsStatisticDto> GetEventsStatisticByOrganizerId(string organizerId)
+    {
+        try
+        {
+            var events = _db.Events.Where(e => e.CreatorId == organizerId);
+            var payments = _db.Payments.Join(events, p => p.EventId, e => e.Id, (p, e) => p);
+
+            var totalEvents = events.Count();
+            var totalBoughtTickets = payments.Sum(p => p.Quantity);
+            var revenue = payments.Sum(p => p.TotalPrice);
+
+            return new EventsStatisticDto
+            {
+                TotalEvents = totalEvents,
+                TotalBoughtTickets = totalBoughtTickets,
+                Revenue = revenue
+            };
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    public async Task<PaymentsStatisticDto> GetPaymentsStatisticByEventId(string eventId)
+    {
+        try
+        {
+            var payments = _db.Payments.Where(p => p.EventId == eventId);
+            
+            var totalPayments = payments.Count();
+            var totalBoughtTickets = payments.Sum(p => p.Quantity);
+            var totalRevenue = payments.Sum(p => p.TotalPrice);
+            
+            return new PaymentsStatisticDto
+            {
+                TotalPayments = totalPayments,
+                TotalBoughtTickets = totalBoughtTickets,
+                TotalRevenue = totalRevenue
+            };
         }
         catch (Exception ex)
         {

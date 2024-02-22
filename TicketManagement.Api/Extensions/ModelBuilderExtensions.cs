@@ -7,7 +7,7 @@ using TicketManagement.Api.Models;
 
 namespace TicketManagement.Api.Extensions;
 
-public static class ModelBuilderExtension
+public static class ModelBuilderExtensions
 {
     private const int MAX_EVENTS_QUANTITY = 1000;
     private const int MAX_USERS_QUANTITY = 10;

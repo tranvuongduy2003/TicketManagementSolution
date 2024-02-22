@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using TicketManagement.Api.Contracts;
 using TicketManagement.Api.Dtos;
@@ -28,6 +29,31 @@ namespace TicketManagement.Api.Controllers
                 _response.Data = categoryObj.categories;
                 _response.Meta = categoryObj.metadata;
                 _response.Message = "Get categories successfully!";
+                
+                Response.Headers.Add("X-Pagination", JsonConvert.SerializeObject(categoryObj.metadata));
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.Message = ex.Message.ToString();
+                return StatusCode(StatusCodes.Status500InternalServerError, _response);
+            }
+
+            return Ok(_response);
+        }
+        
+        [HttpGet("statistic")]
+        [Authorize]
+        [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult> GetStatisticCategories([FromQuery] PaginationFilter filter)
+        {
+            try
+            {
+                var categoryObj = await _categoryService.GetStatisticCategories(filter);
+
+                _response.Data = categoryObj.categories;
+                _response.Meta = categoryObj.metadata;
+                _response.Message = "Get statistic categories successfully!";
                 
                 Response.Headers.Add("X-Pagination", JsonConvert.SerializeObject(categoryObj.metadata));
             }
@@ -70,6 +96,8 @@ namespace TicketManagement.Api.Controllers
         }
 
         [HttpPost]
+        [Authorize]
+        [Authorize(Roles = "ADMIN, CUSTOMER")]
         public async Task<IActionResult> CreateCategory([FromBody] CreateCategoryDto createCategoryDto)
         {
             try
@@ -90,6 +118,8 @@ namespace TicketManagement.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> UpdateCategory(string id, [FromBody] CreateCategoryDto updateCategoryDto)
         {
             try
@@ -116,6 +146,8 @@ namespace TicketManagement.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> DeleteCategory(string id)
         {
             try

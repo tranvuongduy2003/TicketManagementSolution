@@ -5,7 +5,7 @@ namespace TicketManagement.Api.Contracts;
 
 public interface ITokenService
 {
-    string GenerateAccessToken(ApplicationUser applicationUser, IEnumerable<string> roles, DateTime tokenExpired);
+    string GenerateAccessToken(ApplicationUser applicationUser, IEnumerable<string> roles);
     string GenerateRefreshToken();
     ClaimsPrincipal? GetPrincipalFromExpiredToken(string token);
     bool ValidateTokenExpire(string token);

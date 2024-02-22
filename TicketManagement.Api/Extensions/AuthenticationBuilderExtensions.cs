@@ -5,9 +5,8 @@ using TicketManagement.Api.Messaging.IMessaging;
 
 namespace TicketManagement.Api.Extensions;
 
-public static class WebApplicationBuilderExtensions
+public static class AuthenticationBuilderExtensions
 {
-    private static IAzureServiceBusConsumer ServiceBusConsumer { get; set; }
     public static WebApplicationBuilder AddAppAuthetication(this WebApplicationBuilder builder)
     {
         var settingsSection = builder.Configuration.GetSection("ApiSettings:JwtOptions");
@@ -23,7 +22,7 @@ public static class WebApplicationBuilderExtensions
         {
             x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        }).AddJwtBearer(x =>
+        }).AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, x =>
         {
             x.TokenValidationParameters = new TokenValidationParameters
             {
@@ -32,31 +31,12 @@ public static class WebApplicationBuilderExtensions
                 ValidateIssuer = true,
                 ValidIssuer = issuer,
                 ValidAudience = audience,
-                ValidateAudience = true
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
             };
         });
 
         return builder;
-    }
-    
-    public static IApplicationBuilder UseAzureServiceBusConsumer(this IApplicationBuilder app)
-    {
-        ServiceBusConsumer = app.ApplicationServices.GetService<IAzureServiceBusConsumer>();
-        var hostApplicationLife = app.ApplicationServices.GetService<IHostApplicationLifetime>();
-
-        hostApplicationLife.ApplicationStarted.Register(OnStart);
-        hostApplicationLife.ApplicationStopping.Register(OnStop);
-
-        return app;
-    }
-
-    private static void OnStop()
-    {
-        ServiceBusConsumer.Stop();  
-    }
-
-    private static void OnStart()
-    {
-        ServiceBusConsumer.Start();
     }
 }

@@ -42,7 +42,7 @@ public class TicketService : ITicketService
                 _ => tickets
             };
 
-            var metadata = new Metadata(tickets.Count(), filter.page, filter.size);
+            var metadata = new Metadata(tickets.Count(), filter.page, filter.size, filter.takeAll);
 
             if (filter.takeAll == false)
             {
@@ -99,7 +99,7 @@ public class TicketService : ITicketService
                 _ => tickets
             };
 
-            var metadata = new Metadata(tickets.Count(), filter.page, filter.size);
+            var metadata = new Metadata(tickets.Count(), filter.page, filter.size, filter.takeAll);
 
             if (filter.takeAll == false)
             {

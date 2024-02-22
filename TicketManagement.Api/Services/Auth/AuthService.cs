@@ -68,7 +68,7 @@ public class AuthService : IAuthService
                 UserDto userDto = new()
                 {
                     Email = userToReturn.Email,
-                    ID = userToReturn.Id,
+                    Id = userToReturn.Id,
                     Name = userToReturn.Name,
                     PhoneNumber = userToReturn.PhoneNumber
                 };
@@ -111,7 +111,7 @@ public class AuthService : IAuthService
 
             //if user was found , Generate JWT Token
             var roles = await _userManager.GetRolesAsync(user);
-            var accessToken = _tokenService.GenerateAccessToken(user, roles, DateTime.Now.AddMinutes(5));
+            var accessToken = _tokenService.GenerateAccessToken(user, roles);
             var refreshToken = _tokenService.GenerateRefreshToken();
 
             user.RefreshToken = refreshToken;
@@ -184,7 +184,7 @@ public class AuthService : IAuthService
             }
 
             var roles = await _userManager.GetRolesAsync(user);
-            var newAccessToken = _tokenService.GenerateAccessToken(user, roles, DateTime.Now.AddMinutes(5));
+            var newAccessToken = _tokenService.GenerateAccessToken(user, roles);
 
             return newAccessToken;
         }

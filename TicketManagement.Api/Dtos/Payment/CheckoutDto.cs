@@ -2,7 +2,7 @@
 
 public class CheckoutDto
 {
-    public int EventId { get; set; }
+    public string EventId { get; set; }
     public string UserId { get; set; }
     public IEnumerable<TicketDto>? Tickets { get; set; }
     public double Discount { get; set; }

@@ -42,14 +42,14 @@ namespace TicketManagement.Api.Controllers
             return Ok(_response);
         }
         
-        [HttpGet("statistic-by-category")]
-        public async Task<IActionResult> GetEventsStatisticByCategory()
+        [HttpGet("newest")]
+        public async Task<IActionResult> GetTop3NewestEvents()
         {
             try
             {
-                var eventDtos = await _eventService.GetEventsStatisticByCategory();
+                var events = await _eventService.GetTop3NewestEvents();
 
-                _response.Data = eventDtos;
+                _response.Data = events;
                 _response.Message = "Get events successfully!";
             }
             catch (Exception ex)
@@ -62,10 +62,90 @@ namespace TicketManagement.Api.Controllers
             return Ok(_response);
         }
         
-        [Authorize]
-        [Authorize(Roles = "ORGANIZER")]
+        [HttpGet("upcoming")]
+        public async Task<IActionResult> Get24hUpcomingEvents()
+        {
+            try
+            {
+                var events = await _eventService.Get24hUpcomingEvents();
+
+                _response.Data = events;
+                _response.Message = "Get events successfully!";
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.Message = ex.Message.ToString();
+                return StatusCode(StatusCodes.Status500InternalServerError, _response);
+            }
+
+            return Ok(_response);
+        }
+        
+        [HttpGet("highlight")]
+        public async Task<IActionResult> GetHighlightEvent()
+        {
+            try
+            {
+                var highlightEventDto = await _eventService.GetHighlightEvent();
+
+                _response.Data = highlightEventDto;
+                _response.Message = "Get event successfully!";
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.Message = ex.Message.ToString();
+                return StatusCode(StatusCodes.Status500InternalServerError, _response);
+            }
+
+            return Ok(_response);
+        }
+        
+        [HttpGet("highlight/list")]
+        public async Task<IActionResult> GetTopHighlightEvents()
+        {
+            try
+            {
+                var highlightEventDto = await _eventService.GetHighlightEventsList();
+
+                _response.Data = highlightEventDto;
+                _response.Message = "Get event successfully!";
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.Message = ex.Message.ToString();
+                return StatusCode(StatusCodes.Status500InternalServerError, _response);
+            }
+
+            return Ok(_response);
+        }
+        
+        [HttpGet("random")]
+        public async Task<IActionResult> GetRandomEvents()
+        {
+            try
+            {
+                var events = await _eventService.GetRandomEvents();
+
+                _response.Data = events;
+                _response.Message = "Get events successfully!";
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.Message = ex.Message.ToString();
+                return StatusCode(StatusCodes.Status500InternalServerError, _response);
+            }
+
+            return Ok(_response);
+        }
+        
         [HttpGet]
-        [Route("/event-by-organizer/{organizerId}")]
+        [Authorize]
+        [Authorize(Roles = "ADMIN, ORGANIZER")]
+        [Route("event-by-organizer/{organizerId}")]
         public async Task<IActionResult> GetEventsByOrganizerId(string organizerId, [FromQuery] PaginationFilter filter)
         {
             try
@@ -117,6 +197,8 @@ namespace TicketManagement.Api.Controllers
         }
 
         [HttpPost]
+        [Authorize]
+        [Authorize(Roles = "ADMIN, ORGANIZER")]
         public async Task<IActionResult> CreateEvent([FromBody] CreateEventDto createEventDto)
         {
             try
@@ -137,6 +219,8 @@ namespace TicketManagement.Api.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize]
+        [Authorize(Roles = "ADMIN, ORGANIZER")]
         public async Task<IActionResult> UpdateEvent(string id, [FromBody] UpdateEventDto updateEventDto)
         {
             try
@@ -163,6 +247,8 @@ namespace TicketManagement.Api.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize]
+        [Authorize(Roles = "ADMIN, ORGANIZER")]
         public async Task<IActionResult> DeleteEvent(string id)
         {
             try
@@ -188,7 +274,7 @@ namespace TicketManagement.Api.Controllers
             return Ok(_response);
         }
         
-        [HttpPatch("/increase-favourite/{id}")]
+        [HttpPatch("{id}/increase-favourite")]
         public async Task<IActionResult> IncreaseFavourite(string id)
         {
             try
@@ -215,7 +301,7 @@ namespace TicketManagement.Api.Controllers
             return Ok(_response);
         }
         
-        [HttpPatch("/decrease-favourite/{id}")]
+        [HttpPatch("{id}/decrease-favourite")]
         public async Task<IActionResult> DecreaseFavourite(string id)
         {
             try
@@ -242,7 +328,7 @@ namespace TicketManagement.Api.Controllers
             return Ok(_response);
         }
         
-        [HttpPatch("/increase-share/{id}")]
+        [HttpPatch("{id}/increase-share")]
         public async Task<IActionResult> IncreaseShare(string id)
         {
             try
@@ -269,7 +355,7 @@ namespace TicketManagement.Api.Controllers
             return Ok(_response);
         }
         
-        [HttpPatch("/decrease-share/{id}")]
+        [HttpPatch("{id}/decrease-share")]
         public async Task<IActionResult> DecreaseShare(string id)
         {
             try

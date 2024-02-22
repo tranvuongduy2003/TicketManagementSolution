@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using TicketManagement.Api.Enums;
+using TicketManagement.Api.Models;
 
 namespace TicketManagement.Api.Dtos;
 
@@ -13,7 +14,6 @@ public class EventDto
     public string CreatorId { get; set; }
     public string Location { get; set; }
     public IEnumerable<string> Album { get; set; }
-    public DateTime EventDate { get; set; }
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
     public bool IsPromotion { get; set; }
@@ -26,4 +26,7 @@ public class EventDto
     public EventStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    public Category? Category { get; set; } = null;
+    public ApplicationUser? Creator { get; set; }  = null!;
 }

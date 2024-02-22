@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using TicketManagement.Api.Contracts;
 using TicketManagement.Api.Dtos;
 
@@ -18,6 +19,7 @@ namespace TicketManagement.Api.Controllers
         }
 
         [HttpGet]
+        [Authorize]
         public async Task<IActionResult> GetTickets([FromQuery] PaginationFilter filter)
         {
             try
@@ -40,6 +42,7 @@ namespace TicketManagement.Api.Controllers
 
         [HttpGet]
         [Route("my-tickets/{userId}")]
+        [Authorize(Roles = "CUSTOMER, ADMIN")]
         public async Task<IActionResult> GetTicketsByUserId(string userId, [FromQuery] PaginationFilter filter)
         {
             try
@@ -62,6 +65,7 @@ namespace TicketManagement.Api.Controllers
         
         [HttpGet]
         [Route("{id}")]
+        [Authorize]
         public async Task<IActionResult> GetTicketById(string id)
         {
             try
@@ -90,6 +94,7 @@ namespace TicketManagement.Api.Controllers
         
         [HttpPatch]
         [Route("{id}")]
+        [Authorize]
         public async Task<IActionResult> UpdateTicketInfo(string id, [FromBody] UdpateTicketDto udpateTicketDto)
         {
             try
@@ -118,6 +123,7 @@ namespace TicketManagement.Api.Controllers
         
         [HttpGet]
         [Route("get-by-payment/{paymentId}")]
+        [Authorize]
         public async Task<IActionResult> GetTicketsByPaymentId(string paymentId)
         {
             try
@@ -139,6 +145,7 @@ namespace TicketManagement.Api.Controllers
         
         [HttpPost]
         [Route("create-tickets/{paymentId}")]
+        [Authorize]
         public async Task<IActionResult> CreateTickets(string paymentId, [FromBody] CreateTicketsDto createTicketsDto)
         {
             try
@@ -160,6 +167,7 @@ namespace TicketManagement.Api.Controllers
         
         [HttpPatch]
         [Route("validate-tickets/{paymentId}")]
+        [Authorize]
         public async Task<IActionResult> ValidateTickets(string paymentId, [FromBody] bool isSuccess)
         {
             try
@@ -180,12 +188,13 @@ namespace TicketManagement.Api.Controllers
         }
         
         [HttpPatch]
-        [Route("terminate/{ticketId}")]
-        public async Task<IActionResult> TerminateTicket(string ticketId)
+        [Route("{id}/terminate")]
+        [Authorize]
+        public async Task<IActionResult> TerminateTicket(string id)
         {
             try
             {
-                var ticketDtos = await _ticketService.TerminateTicket(ticketId);
+                var ticketDtos = await _ticketService.TerminateTicket(id);
 
                 if (ticketDtos == null)
                 {

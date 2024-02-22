@@ -1,4 +1,5 @@
 ﻿using TicketManagement.Api.Enums;
+using TicketManagement.Api.Models;
 
 namespace TicketManagement.Api.Dtos;
 
@@ -17,4 +18,6 @@ public class TicketDto
     public DateTime CloseTime { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public Event? Event { get; set; } = null;
+    public Payment? Payment { get; set; } = null;
 }

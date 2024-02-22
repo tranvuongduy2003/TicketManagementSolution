@@ -6,7 +6,11 @@ namespace TicketManagement.Api.Contracts;
 public interface IEventService
 {
     Task<ListEventObject> GetEvents(PaginationFilter filter);
-    Task<IEnumerable<EventStatistic>> GetEventsStatisticByCategory();
+    Task<IEnumerable<EventDto>> GetTop3NewestEvents();
+    Task<IEnumerable<EventDto>> Get24hUpcomingEvents();
+    Task<HighlightEventDto> GetHighlightEvent();
+    Task<IEnumerable<EventDto>> GetHighlightEventsList();
+    Task<IEnumerable<EventDto>> GetRandomEvents();
     Task<ListEventObject> GetEventsByOrganizerId(string organizerId, PaginationFilter filter);
     Task<EventDto?> GetEventById(string eventId);
     Task<bool> CreateEvent(CreateEventDto createEventDto);

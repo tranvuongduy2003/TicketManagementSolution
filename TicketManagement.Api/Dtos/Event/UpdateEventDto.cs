@@ -11,8 +11,6 @@ public class UpdateEventDto
     public string Location { get; set; }
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
-    public int TicketTypeId { get; set; }
-    public Boolean TicketIsPaid { get; set; }
     public int TicketQuantity { get; set; }
     public decimal? TicketPrice { get; set; }
     public DateTime TicketStartTime { get; set; }

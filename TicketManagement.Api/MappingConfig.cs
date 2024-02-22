@@ -11,6 +11,10 @@ public class MappingConfig
         var mappingConfig = new MapperConfiguration(config =>
         {
             config.CreateMap<ApplicationUser, UserDto>().ReverseMap();
+            config.CreateMap<ApplicationUser, CustomerDto>().ReverseMap();
+            config.CreateMap<ApplicationUser, OrganizerDto>().ReverseMap();
+            config.CreateMap<UserDto, OrganizerDto>().ReverseMap();
+            config.CreateMap<UserDto, CustomerDto>().ReverseMap();
             config.CreateMap<ApplicationUser, UpdateUserDto>().ReverseMap();
             config.CreateMap<Category, CategoryDto>().ReverseMap();
             config.CreateMap<CreateCategoryDto, Category>();

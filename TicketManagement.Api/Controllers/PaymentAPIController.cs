@@ -1,15 +1,8 @@
-﻿using AutoMapper;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
-using Stripe;
-using Stripe.Checkout;
 using TicketManagement.Api.Contracts;
-using TicketManagement.Api.Data;
 using TicketManagement.Api.Dtos;
-using TicketManagement.Api.Enums;
-using TicketManagement.Api.Messaging.IMessaging;
-using TicketManagement.Api.Models;
-using Event = TicketManagement.Api.Models.Event;
 
 namespace TicketManagement.Api.Controllers
 {
@@ -27,6 +20,7 @@ namespace TicketManagement.Api.Controllers
         }
 
         [HttpGet]
+        [Authorize]
         public async Task<IActionResult> GetPayments([FromQuery] PaginationFilter filter)
         {
             try
@@ -50,6 +44,7 @@ namespace TicketManagement.Api.Controllers
         }
 
         [HttpGet("{userId}")]
+        [Authorize]
         public async Task<IActionResult> GetPaymentsByUserId(string userId, [FromQuery] PaginationFilter filter)
         {
             try
@@ -74,6 +69,7 @@ namespace TicketManagement.Api.Controllers
 
         [HttpGet]
         [Route("event/{eventId}")]
+        [Authorize]
         public async Task<IActionResult> GetPaymentsByEventId(string eventId, [FromQuery] PaginationFilter filter)
         {
             try
@@ -97,6 +93,7 @@ namespace TicketManagement.Api.Controllers
         }
 
         [HttpPost("checkout")]
+        [Authorize]
         public async Task<IActionResult> Checkout([FromBody] CheckoutDto checkoutDto)
         {
             try
@@ -116,8 +113,8 @@ namespace TicketManagement.Api.Controllers
             return Ok(_response);
         }
 
-        // [Authorize]
         [HttpPost("create-stripe-session")]
+        [Authorize]
         public async Task<IActionResult> CreateStripeSession([FromBody] StripeRequestDto stripeRequestDto)
         {
             try
@@ -137,8 +134,8 @@ namespace TicketManagement.Api.Controllers
             return Ok(_response);
         }
 
-        // [Authorize]
-        [HttpPost("validate-stripe-session/{paymentId}")]
+        [HttpPost("{paymentId}/validate-stripe-session")]
+        [Authorize]
         public async Task<IActionResult> ValidateStripeSession(string paymentId)
         {
             try

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Extensions;
 using TicketManagement.Api.Contracts;
 using TicketManagement.Api.Data;
@@ -25,31 +26,145 @@ public class UserService : IUserService
         _mapper = mapper;
     }
 
-    public async Task<IEnumerable<UserDto>> GetUsers()
+    public async Task<ListUserObject<UserDto>> GetUsers(PaginationFilter filter)
     {
         try
         {
-            var users = _db.ApplicationUsers.ToList();
-            var userDtos = _mapper.Map<IEnumerable<UserDto>>(users);
-
-            foreach (var userDto in userDtos)
+            var users = _userManager.Users.ToList();
+            if (filter.search != null)
             {
-                var userRoles = await _userManager.GetRolesAsync(_mapper.Map<ApplicationUser>(userDto));
-                var userRole = Enum.Parse<UserRole>(userRoles.FirstOrDefault());
-                switch (userRole)
-                {
-                    case UserRole.CUSTOMER:
-                        userDto.TotalBuyedTickets = 0;
-                        break;
-                    case UserRole.ORGANIZER:
-                        userDto.TotalEvents = 0;
-                        userDto.TotalSoldTickets = 0;
-                        break;
-                }
-                userDto.Role = userRole;
+                users = users.Where(u => EF.Functions.Contains(u.Name, filter.search) || EF.Functions.Contains(u.Email, filter.search)).ToList();
+            } 
+            users = filter.order switch
+            {
+                PageOrder.ASC => users.OrderBy(c => c.CreatedAt).ToList(),
+                PageOrder.DESC => users.OrderByDescending(c => c.CreatedAt).ToList(),
+                _ => users
+            };
+
+            var metadata = new Metadata(users.Count(), filter.page, filter.size, filter.takeAll);
+            
+            if (filter.takeAll == false)
+            { 
+                users = users.Skip((filter.page - 1) * filter.size)
+                    .Take(filter.size).ToList();
             }
 
-            return userDtos;
+            var userDtos = users.Select(u =>
+            {
+                var userDto = _mapper.Map<UserDto>(u);
+                var userRoles = _userManager.GetRolesAsync(u).GetAwaiter().GetResult();
+                var userRole = Enum.Parse<UserRole>(userRoles.FirstOrDefault());
+                userDto.Role = userRole;
+                return userDto;
+            });
+
+            return new ListUserObject<UserDto>
+            {
+                users = userDtos,
+                metadata = metadata
+            };
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+    
+    public async Task<ListUserObject<CustomerDto>> GetUsersInCustomer(PaginationFilter filter)
+    {
+        try
+        {
+            var users = await _userManager.GetUsersInRoleAsync(UserRole.CUSTOMER.GetDisplayName());
+            if (filter.search != null)
+            {
+                users = users.Where(u => EF.Functions.Contains(u.Name, filter.search) || EF.Functions.Contains(u.Email, filter.search)).ToList();
+            } 
+            users = filter.order switch
+            {
+                PageOrder.ASC => users.OrderBy(c => c.CreatedAt).ToList(),
+                PageOrder.DESC => users.OrderByDescending(c => c.CreatedAt).ToList(),
+                _ => users
+            };
+
+            var metadata = new Metadata(users.Count(), filter.page, filter.size, filter.takeAll);
+            
+            if (filter.takeAll == false)
+            { 
+                users = users.Skip((filter.page - 1) * filter.size)
+                    .Take(filter.size).ToList();
+            }
+
+            var userDtos = users.Select(u =>
+            {
+                var userDto = _mapper.Map<CustomerDto>(u);
+                var userRoles = _userManager.GetRolesAsync(u).GetAwaiter().GetResult();
+                var userRole = Enum.Parse<UserRole>(userRoles.FirstOrDefault());
+                userDto.Role = userRole;
+
+                userDto.TotalBoughtTickets = _db.Payments.Where(p => p.UserId == u.Id).Sum(p => p.Quantity);
+                
+                return userDto;
+            });
+
+            return new ListUserObject<CustomerDto>
+            {
+                users = userDtos,
+                metadata = metadata
+            };
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+    
+    public async Task<ListUserObject<OrganizerDto>> GetUsersInOrganizer(PaginationFilter filter)
+    {
+        try
+        {
+            var users = await _userManager.GetUsersInRoleAsync(UserRole.ORGANIZER.GetDisplayName());
+            if (filter.search != null)
+            {
+                users = users.Where(u => EF.Functions.Contains(u.Name, filter.search) || EF.Functions.Contains(u.Email, filter.search)).ToList();
+            } 
+            users = filter.order switch
+            {
+                PageOrder.ASC => users.OrderBy(c => c.CreatedAt).ToList(),
+                PageOrder.DESC => users.OrderByDescending(c => c.CreatedAt).ToList(),
+                _ => users
+            };
+
+            var metadata = new Metadata(users.Count(), filter.page, filter.size, filter.takeAll);
+            
+            if (filter.takeAll == false)
+            { 
+                users = users.Skip((filter.page - 1) * filter.size)
+                    .Take(filter.size).ToList();
+            }
+
+            var userDtos = users.Select(u =>
+            {
+                var userDto = _mapper.Map<OrganizerDto>(u);
+                var userRoles = _userManager.GetRolesAsync(u).GetAwaiter().GetResult();
+                var userRole = Enum.Parse<UserRole>(userRoles.FirstOrDefault());
+                userDto.Role = userRole;
+
+                userDto.TotalEvents = _db.Events.Count(e => e.CreatorId == u.Id);
+                userDto.TotalSoldTickets = _db.Payments.Join(_db.Events, p => p.EventId, e => e.Id, (p, e) => new
+                {
+                    Quantity = p.Quantity,
+                    CreatorId = e.CreatorId
+                }).Where(p => p.CreatorId == u.Id).Sum(p => p.Quantity);
+                
+                return userDto;
+            });
+
+            return new ListUserObject<OrganizerDto>
+            {
+                users = userDtos,
+                metadata = metadata
+            };
         }
         catch (Exception ex)
         {
@@ -74,12 +189,18 @@ public class UserService : IUserService
             switch (userDto.Role)
             {
                 case UserRole.CUSTOMER:
-                    userDto.TotalBuyedTickets = 0;
-                    break;
+                    var customerDto = _mapper.Map<CustomerDto>(userDto);
+                    customerDto.TotalBoughtTickets = _db.Payments.Where(p => p.UserId == userDto.Id).Sum(p => p.Quantity);
+                    return customerDto;
                 case UserRole.ORGANIZER:
-                    userDto.TotalEvents = 0;
-                    userDto.TotalSoldTickets = 0;
-                    break;
+                    var organizerDto = _mapper.Map<OrganizerDto>(userDto);
+                    organizerDto.TotalEvents = _db.Events.Count(e => e.CreatorId == userDto.Id);
+                    organizerDto.TotalSoldTickets = _db.Payments.Join(_db.Events, p => p.EventId, e => e.Id, (p, e) => new
+                    {
+                        Quantity = p.Quantity,
+                        CreatorId = e.CreatorId
+                    }).Where(p => p.CreatorId == userDto.Id).Sum(p => p.Quantity);
+                    return organizerDto;
             }
 
             return userDto;

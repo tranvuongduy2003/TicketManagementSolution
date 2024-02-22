@@ -4,6 +4,7 @@ using TicketManagement.Api.Contracts;
 using TicketManagement.Api.Data;
 using TicketManagement.Api.Dtos;
 using TicketManagement.Api.Enums;
+using TicketManagement.Api.Extensions;
 using TicketManagement.Api.Models;
 
 namespace TicketManagement.Api.Services;
@@ -32,7 +33,8 @@ public class EventService : IEventService
             if (filter.search != null)
             {
                 events = events.Where(e => EF.Functions.Contains(e.Name, filter.search)).ToList();
-            } 
+            }
+
             events = filter.order switch
             {
                 PageOrder.ASC => events.OrderBy(c => c.CreatedAt).ToList(),
@@ -40,10 +42,10 @@ public class EventService : IEventService
                 _ => events
             };
 
-            var metadata = new Metadata(events.Count(), filter.page, filter.size);
-            
+            var metadata = new Metadata(events.Count(), filter.page, filter.size, filter.takeAll);
+
             if (filter.takeAll == false)
-            { 
+            {
                 events = events.Skip((filter.page - 1) * filter.size)
                     .Take(filter.size).ToList();
             }
@@ -62,19 +64,150 @@ public class EventService : IEventService
         }
     }
 
-    public async Task<IEnumerable<EventStatistic>> GetEventsStatisticByCategory()
+    public async Task<IEnumerable<EventDto>> GetTop3NewestEvents()
     {
         try
         {
-            var statistic = await _db.Events
-                .GroupBy(e => e.CategoryId)
-                .Select(pl => new EventStatistic()
-                {
-                    CategoryId = pl.Key,
-                    EventQuantity = pl.Count(),
-                }).ToListAsync();
+            var events = _db.Events.Where(e => e.StartTime <= DateTime.UtcNow).OrderByDescending(e => e.StartTime)
+                .Take(3).ToList();
 
-            return statistic;
+            var eventDtos = _mapper.Map<IEnumerable<EventDto>>(events);
+
+            return eventDtos;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    public async Task<IEnumerable<EventDto>> Get24hUpcomingEvents()
+    {
+        try
+        {
+            var events = _db.Events.Where(e =>
+                e.StartTime >= DateTime.UtcNow && e.StartTime <= DateTime.UtcNow.AddDays(1)).Take(3).ToList();
+
+            var eventDtos = _mapper.Map<IEnumerable<EventDto>>(events);
+
+            return eventDtos;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    public async Task<HighlightEventDto> GetHighlightEvent()
+    {
+        try
+        {
+            var startOfWeek = DateTime.UtcNow.StartOfWeek();
+            var eventsInWeek = _db.Events.Where(e => e.StartTime >= startOfWeek && e.StartTime <= DateTime.UtcNow)
+                .ToList();
+            if (eventsInWeek.Any())
+            {
+                var highlightEvent = GetHighlightEventByOptionalEvents(eventsInWeek);
+
+                var eventDto = _mapper.Map<EventDto>(highlightEvent);
+
+                return new HighlightEventDto
+                {
+                    Event = eventDto,
+                    HighlightType = HighlightType.WEEK,
+                };
+            }
+
+            var startOfMonth = DateTime.Now.StartOfMonth();
+            var eventsInMonth = _db.Events.Where(e =>
+                e.StartTime >= startOfMonth && e.StartTime <= DateTime.UtcNow).ToList();
+            if (eventsInMonth.Any())
+            {
+                var highlightEvent = GetHighlightEventByOptionalEvents(eventsInMonth);
+
+                var eventDto = _mapper.Map<EventDto>(highlightEvent);
+
+                return new HighlightEventDto
+                {
+                    Event = eventDto,
+                    HighlightType = HighlightType.MONTH,
+                };
+            }
+
+            var startOfYear = DateTime.Now.StartOfYear();
+            var eventsInYear = _db.Events.Where(e =>
+                e.StartTime >= startOfYear && e.StartTime <= DateTime.UtcNow).ToList();
+            if (eventsInMonth.Any())
+            {
+                var highlightEvent = GetHighlightEventByOptionalEvents(eventsInYear);
+
+                var eventDto = _mapper.Map<EventDto>(highlightEvent);
+
+                return new HighlightEventDto
+                {
+                    Event = eventDto,
+                    HighlightType = HighlightType.YEAR,
+                };
+            }
+
+            return new HighlightEventDto
+            {
+                Event = null,
+                HighlightType = HighlightType.NONE
+            };
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    public async Task<IEnumerable<EventDto>> GetHighlightEventsList()
+    {
+        try
+        {
+            var events = _db.Events.ToList();
+            if (_db.Payments.Any())
+            {
+                var eventsByQuantity = _db.Payments.GroupBy(p => p.EventId).Select(groupedPayments => new
+                {
+                    EventId = groupedPayments.Key,
+                    Quantity = groupedPayments.Sum(jp => jp.Quantity)
+                });
+                events = events.Join(eventsByQuantity, eiw => eiw.Id, ebq => ebq.EventId, (eiw, ebq) => new
+                {
+                    Event = eiw,
+                    Quantity = ebq.Quantity,
+                }).OrderByDescending(joinedEvents => joinedEvents.Quantity).Take(3).Select(joinedEvents => joinedEvents.Event).ToList();
+            }
+            else
+            {
+                events = events.Take(3).ToList();
+            }
+
+            var eventDtos = _mapper.Map<IEnumerable<EventDto>>(events);
+
+            return eventDtos;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    public async Task<IEnumerable<EventDto>> GetRandomEvents()
+    {
+        try
+        {
+            var random = new Random();
+
+            var eventsLength = _db.Events.Count();
+
+            var events = _db.Events.Skip(random.Next(eventsLength >= 3 ? eventsLength - 3 : 0)).Take(3).ToList();
+
+            var eventDtos = _mapper.Map<IEnumerable<EventDto>>(events);
+
+            return eventDtos;
         }
         catch (Exception ex)
         {
@@ -90,7 +223,8 @@ public class EventService : IEventService
             if (filter.search != null)
             {
                 events = events.Where(e => EF.Functions.Contains(e.Name, filter.search)).ToList();
-            } 
+            }
+
             events = filter.order switch
             {
                 PageOrder.ASC => events.OrderBy(c => c.CreatedAt).ToList(),
@@ -98,14 +232,14 @@ public class EventService : IEventService
                 _ => events
             };
 
-            var metadata = new Metadata(events.Count(), filter.page, filter.size);
-            
+            var metadata = new Metadata(events.Count(), filter.page, filter.size, filter.takeAll);
+
             if (filter.takeAll == false)
-            { 
+            {
                 events = events.Skip((filter.page - 1) * filter.size)
                     .Take(filter.size).ToList();
             }
-            
+
             var eventDtos = _mapper.Map<IEnumerable<EventDto>>(events);
 
 
@@ -133,9 +267,9 @@ public class EventService : IEventService
             }
 
             var eventDto = _mapper.Map<EventDto>(eventFromDb);
-            
+
             var albums = await _albumService.GetAlbumsByEventId(eventDto.Id);
-            
+
             eventDto.Album = albums.Select(a => a.Uri);
 
             return eventDto;
@@ -165,7 +299,7 @@ public class EventService : IEventService
             // {
             //     newEvent.Status = EventStatus.CLOSED;
             // }
-            
+
             newEvent.Favourite = 0;
             newEvent.Share = 0;
             newEvent.TicketSoldQuantity = 0;
@@ -360,6 +494,29 @@ public class EventService : IEventService
         catch (Exception ex)
         {
             throw ex;
+        }
+    }
+
+    private Event? GetHighlightEventByOptionalEvents(List<Event> events)
+    {
+        if (_db.Payments.Any())
+        {
+            var eventsByQuantity = _db.Payments.GroupBy(p => p.EventId).Select(groupedPayments => new
+            {
+                EventId = groupedPayments.Key,
+                Quantity = groupedPayments.Sum(jp => jp.Quantity)
+            });
+            var highlightEvent = events.Join(eventsByQuantity, eiw => eiw.Id, ebq => ebq.EventId, (eiw, ebq) => new
+            {
+                Event = eiw,
+                Quantity = ebq.Quantity,
+            }).MaxBy(joinedEvents => joinedEvents.Quantity);
+
+            return highlightEvent != null ? highlightEvent.Event : null;
+        }
+        else
+        {
+            return events.FirstOrDefault();
         }
     }
 }

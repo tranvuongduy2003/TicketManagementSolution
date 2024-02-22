@@ -2,7 +2,7 @@
 
 public class AlbumDto
 {
-    public int Id { get; set; }
-    public int EventId { get; set; }
+    public string Id { get; set; }
+    public string EventId { get; set; }
     public string Uri { get; set; }
 }

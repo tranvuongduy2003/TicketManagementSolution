@@ -21,7 +21,6 @@ public class Event
     public int? PromotionPlan { get; set; }
     public int Favourite { get; set; }
     public int Share { get; set; }
-    [JsonConverter(typeof(JsonStringEnumConverter))]
     public int TicketQuantity { get; set; }
     public int TicketSoldQuantity { get; set; }
     public decimal TicketPrice { get; set; }

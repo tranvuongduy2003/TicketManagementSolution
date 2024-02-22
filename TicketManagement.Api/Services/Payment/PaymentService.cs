@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using TicketManagement.Api.Contracts;
 using TicketManagement.Api.Data;
@@ -18,17 +19,19 @@ public class PaymentService : IPaymentService
     private readonly ITicketService _ticketService;
     private readonly IMapper _mapper;
     private readonly IConfiguration _configuration;
+    private readonly UserManager<ApplicationUser> _userManager;
     protected ResponseDto _response;
 
     public PaymentService(IMessageBus messageBus, ITicketService ticketService,
         AppDbContext db,
-        IMapper mapper, IConfiguration configuration)
+        IMapper mapper, IConfiguration configuration, UserManager<ApplicationUser> userManager)
     {
         _messageBus = messageBus;
         _ticketService = ticketService;
         _db = db;
         _mapper = mapper;
         _configuration = configuration;
+        _userManager = userManager;
         _response = new();
     }
 
@@ -54,12 +57,24 @@ public class PaymentService : IPaymentService
                 _ => payments
             };
 
-            var metadata = new Metadata(payments.Count(), filter.page, filter.size);
+            var metadata = new Metadata(payments.Count(), filter.page, filter.size, filter.takeAll);
 
             if (filter.takeAll == false)
             {
                 payments = payments.Skip((filter.page - 1) * filter.size)
-                    .Take(filter.size).ToList();
+                    .Take(filter.size).Join(_userManager.Users, p => p.UserId, u => u.Id, (p, u) =>
+                    {
+                        var joinedPayment = p;
+                        p.User = new ApplicationUser
+                        {
+                            Id = u.Id,
+                            Name = u.Name,
+                            Email = u.Email,
+                            PhoneNumber = u.PhoneNumber,
+                            Avatar = u.Avatar,
+                        };
+                        return p;
+                    }).ToList();
             }
 
             var paymentDtos = _mapper.Map<IEnumerable<PaymentDto>>(payments);
@@ -102,7 +117,7 @@ public class PaymentService : IPaymentService
                 _ => payments
             };
 
-            var metadata = new Metadata(payments.Count(), filter.page, filter.size);
+            var metadata = new Metadata(payments.Count(), filter.page, filter.size, filter.takeAll);
 
             if (filter.takeAll == false)
             {
@@ -146,12 +161,24 @@ public class PaymentService : IPaymentService
                 _ => payments
             };
 
-            var metadata = new Metadata(payments.Count(), filter.page, filter.size);
+            var metadata = new Metadata(payments.Count(), filter.page, filter.size, filter.takeAll);
 
             if (filter.takeAll == false)
             {
                 payments = payments.Skip((filter.page - 1) * filter.size)
-                    .Take(filter.size).ToList();
+                    .Take(filter.size).Join(_userManager.Users, p => p.UserId, u => u.Id, (p, u) =>
+                    {
+                        var joinedPayment = p;
+                        p.User = new ApplicationUser
+                        {
+                            Id = u.Id,
+                            Name = u.Name,
+                            Email = u.Email,
+                            PhoneNumber = u.PhoneNumber,
+                            Avatar = u.Avatar,
+                        };
+                        return p;
+                    }).ToList();
             }
 
             var paymentDtos = _mapper.Map<IEnumerable<PaymentDto>>(payments);

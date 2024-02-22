@@ -17,7 +17,7 @@ public class TokenService : ITokenService
         _jwtOptions = jwtOptions.Value;
     }
 
-    public string GenerateAccessToken(ApplicationUser applicationUser, IEnumerable<string> roles, DateTime tokenExpired)
+    public string GenerateAccessToken(ApplicationUser applicationUser, IEnumerable<string> roles)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
 
@@ -31,15 +31,17 @@ public class TokenService : ITokenService
 
         claimList.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
         
-        var token = new JwtSecurityToken(
-            issuer: _jwtOptions.Issuer,
-            audience: _jwtOptions.Audience,
-            claims: claimList,
-            expires: tokenExpired,
-            signingCredentials: new SigningCredentials(new SymmetricSecurityKey(key),
-                SecurityAlgorithms.HmacSha256Signature)
-        );
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Issuer = _jwtOptions.Issuer,
+            Audience = _jwtOptions.Audience,
+            Subject = new ClaimsIdentity(claimList),
+            Expires = DateTime.UtcNow.AddHours(8),
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key),
+                SecurityAlgorithms.HmacSha256)
+        };
 
+        var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
     }
 
@@ -52,9 +54,9 @@ public class TokenService : ITokenService
         var token = new JwtSecurityToken(
             issuer: _jwtOptions.Issuer,
             audience: _jwtOptions.Audience,
-            expires: DateTime.Now.AddHours(8),
+            expires: DateTime.UtcNow.AddHours(24),
             signingCredentials: new SigningCredentials(new SymmetricSecurityKey(key),
-                SecurityAlgorithms.HmacSha256Signature)
+                SecurityAlgorithms.HmacSha256)
         );
         
         return tokenHandler.WriteToken(token);
@@ -66,20 +68,17 @@ public class TokenService : ITokenService
 
         var tokenValidationParameters = new TokenValidationParameters
         {
-            ValidateAudience = false,
-            ValidateIssuer = false,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(key),
-            ValidateLifetime = false
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = false,
         };
 
         var tokenHandler = new JwtSecurityTokenHandler();
 
-
         var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
-        if (securityToken is not JwtSecurityToken jwtSecurityToken ||
-            !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256Signature,
-                StringComparison.InvariantCultureIgnoreCase))
+        if (securityToken is not JwtSecurityToken jwtSecurityToken || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
             throw new SecurityTokenException("Invalid token");
 
         return principal;
@@ -95,6 +94,6 @@ public class TokenService : ITokenService
 
         if (jwtToken is null) return false;
 
-        return jwtToken.ValidTo > DateTime.Now;
+        return jwtToken.ValidTo > DateTime.UtcNow;
     }
 }

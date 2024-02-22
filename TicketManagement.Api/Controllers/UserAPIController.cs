@@ -18,16 +18,17 @@ namespace TicketManagement.Api.Controllers
             _response = new();
         }
 
+        [HttpGet]
         [Authorize]
         [Authorize(Roles = "ADMIN")]
-        [HttpGet]
-        public async Task<IActionResult> GetUsers()
+        public async Task<IActionResult> GetUsers([FromQuery] PaginationFilter filter)
         {
             try
             {
-                var userDtos = await _userService.GetUsers();
+                var userObj = await _userService.GetUsers(filter);
 
-                _response.Data = userDtos;
+                _response.Data = userObj.users;
+                _response.Meta = userObj.metadata;
                 _response.Message = "Get users successfully!";
             }
             catch (Exception ex)
@@ -39,10 +40,56 @@ namespace TicketManagement.Api.Controllers
 
             return Ok(_response);
         }
-
+        
+        [HttpGet("customer")]
         [Authorize]
         [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult> GetUsersInCustomer([FromQuery] PaginationFilter filter)
+        {
+            try
+            {
+                var userObj = await _userService.GetUsersInCustomer(filter);
+
+                _response.Data = userObj.users;
+                _response.Meta = userObj.metadata;
+                _response.Message = "Get users role CUSTOMER successfully!";
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.Message = ex.Message.ToString();
+                return StatusCode(StatusCodes.Status500InternalServerError, _response);
+            }
+
+            return Ok(_response);
+        }
+        
+        [HttpGet("organizer")]
+        [Authorize]
+        [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult> GetUsersInOrganizer([FromQuery] PaginationFilter filter)
+        {
+            try
+            {
+                var userObj = await _userService.GetUsersInOrganizer(filter);
+
+                _response.Data = userObj.users;
+                _response.Meta = userObj.metadata;
+                _response.Message = "Get users in role ORGANIZER successfully!";
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.Message = ex.Message.ToString();
+                return StatusCode(StatusCodes.Status500InternalServerError, _response);
+            }
+
+            return Ok(_response);
+        }
+
         [HttpGet("{id}")]
+        [Authorize]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetUserById(string id)
         {
             try
