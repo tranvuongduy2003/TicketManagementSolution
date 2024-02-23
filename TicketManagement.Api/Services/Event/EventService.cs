@@ -25,14 +25,56 @@ public class EventService : IEventService
         _ticketService = ticketService;
     }
 
-    public async Task<ListEventObject> GetEvents(PaginationFilter filter)
+    public async Task<ListEventObject> GetEvents(EventFilter filter)
     {
         try
         {
             var events = _db.Events.ToList();
             if (filter.search != null)
             {
-                events = events.Where(e => EF.Functions.Contains(e.Name, filter.search)).ToList();
+                events = events.Where(e => e.Name.ToLower().Contains(filter.search.ToLower())).ToList();
+            }
+
+            if (filter.categoryKeys != null && filter.categoryKeys.Count() > 0)
+            {
+                events = events.Where(e => filter.categoryKeys.Any(c => c == e.CategoryId)).ToList();
+            }
+
+            if (filter.price != null && filter.price.Count() > 0)
+            {
+                events = events.Where(e =>
+                {
+                    var valid = false;
+                    foreach (var priceType in filter.price)
+                    {
+                        if (priceType == PriceType.FREE && e.TicketPrice == 0)
+                            valid = true;
+                        else if (priceType == PriceType.PAID && e.TicketPrice > 0)
+                            valid = true;
+                    }
+
+                    return valid;
+                }).ToList();
+            }
+
+            if (filter.time != null && filter.time.Count() > 0)
+            {
+                events = events.Where(e =>
+                {
+                    var valid = false;
+                    foreach (var timeType in filter.time)
+                    {
+                        if (timeType == EventStatus.OPENING && e.StartTime <= DateTime.UtcNow &&
+                            e.EndTime >= DateTime.UtcNow)
+                            valid = true;
+                        else if (timeType == EventStatus.UPCOMING && DateTime.UtcNow < e.StartTime)
+                            valid = true;
+                        else if (timeType == EventStatus.CLOSED && e.EndTime < DateTime.UtcNow)
+                            valid = true;
+                    }
+
+                    return valid;
+                }).ToList();
             }
 
             events = filter.order switch
@@ -47,7 +89,11 @@ public class EventService : IEventService
             if (filter.takeAll == false)
             {
                 events = events.Skip((filter.page - 1) * filter.size)
-                    .Take(filter.size).ToList();
+                    .Take(filter.size).Join(_db.Categories, e => e.CategoryId, c => c.Id, (e, c) =>
+                    {
+                        e.Category = c;
+                        return e;
+                    }).ToList();
             }
 
             var eventDtos = _mapper.Map<IEnumerable<EventDto>>(events);
@@ -175,10 +221,11 @@ public class EventService : IEventService
                     Quantity = groupedPayments.Sum(jp => jp.Quantity)
                 });
                 events = events.Join(eventsByQuantity, eiw => eiw.Id, ebq => ebq.EventId, (eiw, ebq) => new
-                {
-                    Event = eiw,
-                    Quantity = ebq.Quantity,
-                }).OrderByDescending(joinedEvents => joinedEvents.Quantity).Take(3).Select(joinedEvents => joinedEvents.Event).ToList();
+                    {
+                        Event = eiw,
+                        Quantity = ebq.Quantity,
+                    }).OrderByDescending(joinedEvents => joinedEvents.Quantity).Take(3)
+                    .Select(joinedEvents => joinedEvents.Event).ToList();
             }
             else
             {

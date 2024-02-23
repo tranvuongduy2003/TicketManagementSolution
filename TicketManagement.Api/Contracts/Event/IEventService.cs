@@ -5,7 +5,7 @@ namespace TicketManagement.Api.Contracts;
 
 public interface IEventService
 {
-    Task<ListEventObject> GetEvents(PaginationFilter filter);
+    Task<ListEventObject> GetEvents(EventFilter filter);
     Task<IEnumerable<EventDto>> GetTop3NewestEvents();
     Task<IEnumerable<EventDto>> Get24hUpcomingEvents();
     Task<HighlightEventDto> GetHighlightEvent();

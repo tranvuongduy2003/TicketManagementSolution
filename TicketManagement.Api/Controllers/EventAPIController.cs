@@ -20,7 +20,7 @@ namespace TicketManagement.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetEvents([FromQuery] PaginationFilter filter)
+        public async Task<IActionResult> GetEvents([FromQuery] EventFilter filter)
         {
             try
             {
